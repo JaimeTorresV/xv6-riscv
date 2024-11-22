@@ -311,8 +311,9 @@ sys_open(void)
   int n;
 
   argint(1, &omode);
-  if((n = argstr(0, path, MAXPATH)) < 0)
+  if((n = argstr(0, path, MAXPATH)) < 0) {
     return -1;
+  }
 
   begin_op();
 
@@ -334,6 +335,13 @@ sys_open(void)
       return -1;
     }
   }
+
+  int mode = ip->mode;
+
+ 
+  if ((omode == O_RDONLY && mode != 1) || (omode == O_WRONLY && mode != 2)) {
+    return -1; 
+  } 
 
   if(ip->type == T_DEVICE && (ip->major < 0 || ip->major >= NDEV)){
     iunlockput(ip);
@@ -368,6 +376,29 @@ sys_open(void)
   end_op();
 
   return fd;
+}
+
+// Cambiar los permisos de un archivo
+uint64 sys_chmod(void) {
+  char path[MAXPATH];
+	int mode;
+
+  argstr(0, path, MAXPATH);
+  argint(1, &mode);
+
+	if(path[0] == '\0'|| mode<0)
+		return -1;
+
+  struct inode* ip=namei(path);
+
+  if (ip == 0) {
+    return -1; // No se encontró el archivo, retorna error
+  }
+
+	ilock(ip);
+	ip->mode=mode;
+	iunlock(ip);
+	return 1;
 }
 
 uint64
